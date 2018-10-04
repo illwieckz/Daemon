@@ -27,7 +27,13 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-pedantic"
 #endif
+
+// HACK: Try to crash less when asked to decode invalid inputs.
+class crnd_decompression_exception : public std::exception {};
+#define CRND_ASSERT(_exp) (!!(_exp) ? (void)0 : throw crnd_decompression_exception())
+
 #include "crunch/inc/crn_decomp.h"
+
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
