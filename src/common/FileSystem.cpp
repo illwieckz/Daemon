@@ -58,6 +58,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <mach-o/dyld.h>
 #endif
 
+#define MAX_SYMLINK_LEVELS 16
+// see https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/stat.h
+// redefine so it works outside of Unices
+#define DAEMON_S_IFMT       00170000
+#define DAEMON_S_IFLNK      0120000
+#define DAEMON_S_ISLNK(m)   (((m) & DAEMON_S_IFMT) == DAEMON_S_IFLNK)
+// see https://trac.edgewall.org/attachment/ticket/8919/ZipDownload.patch
+#define PKZIP_EXTERNAL_ATTR_FILE_TYPE_SHIFT 16
+
 Log::Logger fsLogs(VM_STRING_PREFIX "fs", "[FS]", Log::Level::NOTICE);
 
 // SerializeTraits for PakInfo/LoadedPakInfo
@@ -124,16 +133,27 @@ namespace FS {
 
 #ifdef BUILD_ENGINE
 static Cvar::Cvar<bool> fs_legacypaks("fs_legacypaks", "Also load pk3s, ignoring version.", Cvar::NONE, false);
+static Cvar::Cvar<bool> fs_pakSymlink("fs_pakSymlink", "Resolve symbolic links in paks the DarkPlaces way", Cvar::NONE, false);
 
 bool UseLegacyPaks()
 {
 	return *fs_legacypaks;
+}
+bool UsePakSymlink()
+{
+	return *fs_pakSymlink;
 }
 #else
 bool UseLegacyPaks()
 {
 	bool result = false;
 	Cvar::ParseCvarValue(Cvar::GetValue("fs_legacypaks"), result);
+	return result;
+}
+bool UsePakSymlink()
+{
+	bool result = false;
+	Cvar::ParseCvarValue(Cvar::GetValue("fs_pakSymlink"), result);
 	return result;
 }
 #endif
@@ -918,6 +938,20 @@ public:
 		return fileInfo.uncompressed_size;
 	}
 
+	// Check if currently open file is a symbolic link
+	bool IsSymlink(std::error_code& err) const
+	{
+		unz_file_info64 fileInfo;
+		int result = unzGetCurrentFileInfo64(zipFile, &fileInfo, nullptr, 0, nullptr, 0, nullptr, 0);
+		if (result != UNZ_OK) {
+			SetErrorCodeZlib(err, result);
+			return false;
+		}
+		ClearErrorCode(err);
+		uLong attr = fileInfo.external_fa >> PKZIP_EXTERNAL_ATTR_FILE_TYPE_SHIFT;
+		return ( DAEMON_S_ISLNK(attr) );
+	}
+
 	// Read from the currently open file
 	size_t ReadFile(void* buffer, size_t length, std::error_code& err) const
 	{
@@ -1253,7 +1287,74 @@ const std::vector<LoadedPakInfo>& GetLoadedPaks()
 	return loadedPaks;
 }
 
-std::string ReadFile(Str::StringRef path, std::error_code& err)
+// ExpandSymlink
+// code adapted from DarkPlaces fs.c FS_OpenReadFile
+// commit 1c55fd95ff34d9aafb76c927215ea8fbab5210c6
+// Copyright 2008 divverent
+// GPLv2+
+std::string ExpandSymlink(Str::StringRef path, Str::StringRef content)
+{
+	const char *filename = path.c_str();
+
+	char linkbuf[MAX_QPATH];
+	Q_strncpyz(linkbuf, content.c_str(), MAX_QPATH);
+	int count = strlen(linkbuf);
+
+	const char *mergeslash;
+	char *mergestart;
+
+	// Now combine the paths...
+	mergeslash = strrchr(filename, '/');
+	mergestart = linkbuf;
+
+	if (mergeslash == NULL) {
+		mergeslash = filename;
+	}
+
+	while (strncmp(mergestart, "../", 3) == 0) {
+		mergestart += 3;
+		while (mergeslash > filename) {
+			--mergeslash;
+			if (*mergeslash == '/') {
+				break;
+			}
+		}
+	}
+
+	// Now, mergestart will point to the path to be appended, and mergeslash points to where it should be appended
+	if (mergeslash == filename) {
+		// Either mergeslash == filename, then we just replace the name (done below)
+	}
+	else {
+		// Or, we append the name after mergeslash;
+		// or rather, we can also shift the linkbuf so we can put everything up to and including mergeslash first
+		int spaceNeeded = mergeslash - filename + 1;
+		int spaceRemoved = mergestart - linkbuf;
+
+		if (count - spaceRemoved + spaceNeeded >= MAX_QPATH) {
+			Log::Debug("symlink: too long path rejected\n");
+			return "";
+		}
+
+		memmove(linkbuf + spaceNeeded, linkbuf + spaceRemoved, count - spaceRemoved);
+		memcpy(linkbuf, filename, spaceNeeded);
+		linkbuf[count - spaceRemoved + spaceNeeded] = 0;
+		mergestart = linkbuf;
+	}
+
+	Log::Debug("found symlink: %s → %s", path, mergestart);
+
+	/*
+	if (CheckNastyPath (mergestart, false)) {
+		Log::Debug("symlink: nasty path %s rejected\n", mergestart);
+		return "";
+	}
+	*/
+
+	return mergestart;
+}
+
+std::string ReadFile(Str::StringRef path, int symlinkLevels, std::error_code& err)
 {
 	auto it = fileMap.find(path);
 	if (it == fileMap.end()) {
@@ -1307,15 +1408,50 @@ std::string ReadFile(Str::StringRef path, std::error_code& err)
 		if (err)
 			return "";
 
+		bool isSymlink = zipFile.IsSymlink(err);
+		if (err) {
+			return "";
+		}
+
 		// Close file and check for CRC errors
 		zipFile.CloseFile(err);
 		if (err)
 			return "";
 
+		if (isSymlink) {
+		if (UsePakSymlink()) {
+				if (symlinkLevels <= 0) {
+					Log::Debug("symlink: %s: too many levels of symbolic links", path);
+					return "";
+				}
+				out = ExpandSymlink(path, out);
+				if (out[0] == '\0') {
+					return "";
+				}
+				out = ReadFile(out, symlinkLevels -1, err);
+				if (err) {
+					return "";
+				}
+			}
+			else {
+				Log::Warn("symlink found in archive but fs_pakSymlink is disabled: %s", path);
+				return "";
+			}
+		}
+
 		return out;
 	}
 
 	ASSERT_UNREACHABLE();
+}
+
+std::string ReadFile(Str::StringRef path, std::error_code& err)
+{
+	std::string out = ReadFile(path, MAX_SYMLINK_LEVELS, err);
+	if (err) {
+		return "";
+	}
+	return out;
 }
 
 void CopyFile(Str::StringRef path, const File& dest, std::error_code& err)
