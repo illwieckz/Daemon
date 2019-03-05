@@ -1937,6 +1937,37 @@ static void R_Rotate( byte *in, int width, int height, int degrees )
 	ri.Hunk_FreeTempMemory( tmp );
 }
 
+byte *R_Resize( byte *in, int width, int height, int width2, int height2 )
+{
+	int i, j, x2, y2;
+	byte *out;
+
+	out = (byte*) ri.Z_Malloc( width2 * height2 * 4 );
+
+	// fast neighbor image scaling
+	// http://tech-algorithm.com/articles/nearest-neighbor-image-scaling/
+	// <<16 trick to compute ratio as int to avoid slow float operation
+	// +1 trick to avoid rounding problem while up-sizing
+	int x_ratio = (int) ( ( width << 16 ) / width2 ) + 1;
+	int y_ratio = (int) ( ( height << 16 ) / height2 ) + 1;
+
+	for ( i = 0; i < height2; i++ )
+	{
+		for ( j = 0 ; j < width2; j++ )
+		{
+			x2 = ( ( j * x_ratio ) >> 16 );
+			y2 = ( ( i * y_ratio ) >> 16 );
+			out[ 4 * ( i * width2 + j ) + 0 ] = in[ 4 * ( y2 * width + x2 ) + 0 ];
+			out[ 4 * ( i * width2 + j ) + 1 ] = in[ 4 * ( y2 * width + x2 ) + 1 ];
+			out[ 4 * ( i * width2 + j ) + 2 ] = in[ 4 * ( y2 * width + x2 ) + 2 ];
+			out[ 4 * ( i * width2 + j ) + 3 ] = in[ 4 * ( y2 * width + x2 ) + 3 ];
+		}
+	}
+
+	ri.Free( in );
+	return out;
+}
+
 /*
 ===============
 R_FindCubeImage
@@ -2113,6 +2144,8 @@ tryQuakeSuffices:
 	}
 	numPicsToFree = 0;
 
+	int firstWidth;
+
 	for ( i = 0; i < 6; i++ )
 	{
 		Com_sprintf( filename, sizeof( filename ), "%s_%s", buffer, quakeSuffices[ i ] );
@@ -2143,6 +2176,22 @@ tryQuakeSuffices:
 		}
 
 		R_Rotate( pic[ i ], width, height, quakeRot[ i ] );
+
+		switch ( i )
+		{
+			case 0:
+				// cubemap face is always a square, no need to store firstHeight
+				firstWidth = width;
+				break;
+			case 5:
+				if ( width != firstWidth )
+				{
+					Log::Warn( "found %d×%d bottom face in %d×%d cubemap; resizing", width, height, firstWidth, firstWidth );
+					pic[ i ] = R_Resize( pic[ i ], width, height, firstWidth, firstWidth );
+					width = height = firstWidth;
+				}
+				break;
+		}
 
 		numPicsToFree = i;
 	}
