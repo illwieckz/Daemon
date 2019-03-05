@@ -2144,7 +2144,10 @@ tryQuakeSuffices:
 	}
 	numPicsToFree = 0;
 
-	int firstWidth;
+	// no need to store greaterHeight since cubmap face is a square
+	int greaterWidth;
+	greaterWidth = 0;
+	int widthList[6];
 
 	for ( i = 0; i < 6; i++ )
 	{
@@ -2177,24 +2180,26 @@ tryQuakeSuffices:
 
 		R_Rotate( pic[ i ], width, height, quakeRot[ i ] );
 
-		switch ( i )
+		if ( width > greaterWidth )
 		{
-			case 0:
-				// cubemap face is always a square, no need to store firstHeight
-				firstWidth = width;
-				break;
-			case 5:
-				if ( width != firstWidth )
-				{
-					Log::Warn( "found %d×%d bottom face in %d×%d cubemap; resizing", width, height, firstWidth, firstWidth );
-					pic[ i ] = R_Resize( pic[ i ], width, height, firstWidth, firstWidth );
-					width = height = firstWidth;
-				}
-				break;
+			greaterWidth = width;
 		}
+		widthList [ i ] = width;
 
 		numPicsToFree = i;
 	}
+
+	// make sure all the faces have the same size
+	for ( i = 0; i < 6; i++ )
+	{
+		if ( widthList[ i ] != greaterWidth )
+		{
+			// reuse width as height since it's a square
+			Log::Warn( "Cube map face '%s' has %d×%d size instead of %d×%d; resizing", filename, widthList[ i ], widthList[ i ], greaterWidth, greaterWidth );
+			pic[ i ] = R_Resize( pic[ i ], widthList[ i ], widthList[ i ], greaterWidth, greaterWidth );
+		}
+	}
+	width = height = greaterWidth;
 
 createCubeImage:
 	image = R_CreateCubeImage( ( char * ) buffer, ( const byte ** ) pic, width, height, bits, filterType, wrapType );
