@@ -2145,8 +2145,9 @@ tryQuakeSuffices:
 	numPicsToFree = 0;
 
 	// no need to store greaterHeight since cubmap face is a square
-	int greaterWidth;
-	greaterWidth = 0;
+	// GCC KILLER
+	// error: jump to label ‘createCubeImage’ from here crosses initialization of ‘int greaterWidth’
+	int greaterWidth = 0;
 	int widthList[6];
 
 	for ( i = 0; i < 6; i++ )
