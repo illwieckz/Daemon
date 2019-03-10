@@ -1308,27 +1308,27 @@ const std::string ResolveSymlink(Str::StringRef path, Str::StringRef content)
 	pos = 0;
 	rpos = path.rfind("/", path.size());
 	if (rpos == std::string::npos) {
-
+		// stick on filesystem root if extra ../
 		rpos = 0;
 	}
 
 	while (content.size() > pos + 3 && content.substr(pos, 3).compare("../") == 0) {
 		if (rpos != 0) {
 			rpos--;
-			}
+		}
 		rpos = path.rfind("/", rpos);
 		if (rpos == std::string::npos) {
-
+			// stick on filesystem root if extra ../
 			rpos = 0;
-	}
-		pos += 3;
 		}
+		pos += 3;
+	}
 
 	std::string target = "";
 	target.append(path, 0, rpos);
 	if (rpos != 0) {
-
-
+		// only append when there is a parent directory
+		// because vfs absolute path does not use leading /
 		target.append("/");
 	}
 	target.append(content, pos, content.size() - pos);
@@ -1337,7 +1337,91 @@ const std::string ResolveSymlink(Str::StringRef path, Str::StringRef content)
 	return target;
 }
 
-const std::string ReadFile(Str::StringRef path, int symlinkLevels, std::error_code& err)
+const std::string ReadZipFile(LoadedPakInfo pak, ZipArchive *zipFile, Str::StringRef originalPath, Str::StringRef path, int symlinkLevels, std::error_code& err)
+{
+	auto it = fileMap.find(path);
+	if (it == fileMap.end()) {
+		SetErrorCodeFilesystem(err, filesystem_error::no_such_file);
+		return "";
+	}
+
+	const LoadedPakInfo& p = loadedPaks[it->second.first];
+	// Open file
+	if (p.type == pakType_t::PAK_DIR) {
+		Log::Warn("symlink %s tried to escape the pak", path);
+		return "";
+	}
+
+	if (p.fd != pak.fd) {
+		Log::Warn("symlink %s tried to escape the pak", path);
+		return "";
+	}
+
+	// Read file contents
+	zipFile->OpenFile(it->second.second, err);
+	// Open zip
+	if (err) {
+		return "";
+	}
+
+	// Test if file is symlink
+	bool isSymlink = zipFile->IsSymlink(err);
+	if (err) {
+		return "";
+	}
+
+	// Open file in zip
+	offset_t length = zipFile->FileLength(err);
+
+	if (err) {
+		return "";
+	}
+
+	// Read file
+	std::string out;
+	out.resize(length);
+	zipFile->ReadFile(&out[0], length, err);
+
+	if (err) {
+		return "";
+	}
+
+	if (isSymlink) {
+		if (UsePakSymlink()) {
+			if (symlinkLevels <= 0) {
+				Log::Debug("symlink %s: too many levels of symbolic links", originalPath);
+				return "";
+			}
+
+			out = ResolveSymlink(path, out);
+
+			if (out[0] == '\0') {
+				return "";
+			}
+
+			auto it = fileMap.find(path);
+
+			if (it == fileMap.end()) {
+				SetErrorCodeFilesystem(err, filesystem_error::no_such_file);
+				return "";
+			}
+
+			out = ReadZipFile(pak, zipFile, originalPath, out, symlinkLevels -1, err);
+
+			if (err) {
+				return "";
+			}
+		}
+		else {
+			Log::Warn("symlink found in archive but fs_pakSymlink is disabled: %s", originalPath);
+			return "";
+		}
+	}
+
+	return out;
+}
+
+std::string ReadFile(Str::StringRef path, std::error_code& err)
 {
 	auto it = fileMap.find(path);
 	if (it == fileMap.end()) {
@@ -1355,13 +1439,15 @@ const std::string ReadFile(Str::StringRef path, int symlinkLevels, std::error_co
 #else
 		File file = RawPath::OpenRead(Path::Build(pak.path, path), err);
 #endif
-		if (err)
+		if (err) {
 			return "";
+		}
 
 		// Get file length
 		offset_t length = file.Length(err);
-		if (err)
+		if (err) {
 			return "";
+		}
 
 		// Read file contents
 		std::string out;
@@ -1371,70 +1457,27 @@ const std::string ReadFile(Str::StringRef path, int symlinkLevels, std::error_co
 	} else if (pak.type == pakType_t::PAK_ZIP) {
 		// Open zip
 		ZipArchive zipFile = ZipArchive::Open(pak.fd, err);
-		if (err)
-			return "";
 
-		// Open file in zip
-		zipFile.OpenFile(it->second.second, err);
-		if (err)
+		if (err) {
 			return "";
+		}
 
-		// Get file length
-		offset_t length = zipFile.FileLength(err);
-		if (err)
-			return "";
+		std::string out = ReadZipFile(pak, &zipFile, path, path, MAX_SYMLINK_LEVELS, err);
 
-		// Read file
-		std::string out;
-		out.resize(length);
-		zipFile.ReadFile(&out[0], length, err);
-		if (err)
-			return "";
-
-		bool isSymlink = zipFile.IsSymlink(err);
 		if (err) {
 			return "";
 		}
 
 		// Close file and check for CRC errors
 		zipFile.CloseFile(err);
-		if (err)
+		if (err) {
 			return "";
-
-		if (isSymlink) {
-		if (UsePakSymlink()) {
-				if (symlinkLevels <= 0) {
-					Log::Debug("symlink: %s: too many levels of symbolic links", path);
-					return "";
-				}
-				out = ResolveSymlink(path, out);
-				if (out[0] == '\0') {
-					return "";
-				}
-				out = ReadFile(out, symlinkLevels -1, err);
-				if (err) {
-					return "";
-				}
-			}
-			else {
-				Log::Warn("symlink found in archive but fs_pakSymlink is disabled: %s", path);
-				return "";
-			}
 		}
 
-		return out;
+	return out;
 	}
 
 	ASSERT_UNREACHABLE();
-}
-
-std::string ReadFile(Str::StringRef path, std::error_code& err)
-{
-	std::string out = ReadFile(path, MAX_SYMLINK_LEVELS, err);
-	if (err) {
-		return "";
-	}
-	return out;
 }
 
 void CopyFile(Str::StringRef path, const File& dest, std::error_code& err)
