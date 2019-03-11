@@ -1287,71 +1287,54 @@ const std::vector<LoadedPakInfo>& GetLoadedPaks()
 	return loadedPaks;
 }
 
-// ResolveSymlink
-// code adapted from DarkPlaces fs.c FS_OpenReadFile
-// commit 1c55fd95ff34d9aafb76c927215ea8fbab5210c6
-// Copyright 2008 divverent
-// GPLv2+
 const std::string ResolveSymlink(Str::StringRef path, Str::StringRef content)
 {
-	const char *filename = path.c_str();
-
-	char linkbuf[MAX_QPATH];
-	Q_strncpyz(linkbuf, content.c_str(), MAX_QPATH);
-	int count = strlen(linkbuf);
-
-	const char *mergeslash;
-	char *mergestart;
-
-	// Now combine the paths...
-	mergeslash = strrchr(filename, '/');
-	mergestart = linkbuf;
-
-	if (mergeslash == NULL) {
-		mergeslash = filename;
-	}
-
-	while (strncmp(mergestart, "../", 3) == 0) {
-		mergestart += 3;
-		while (mergeslash > filename) {
-			--mergeslash;
-			if (*mergeslash == '/') {
-				break;
-			}
-		}
-	}
-
-	// Now, mergestart will point to the path to be appended, and mergeslash points to where it should be appended
-	if (mergeslash == filename) {
-		// Either mergeslash == filename, then we just replace the name (done below)
-	}
-	else {
-		// Or, we append the name after mergeslash;
-		// or rather, we can also shift the linkbuf so we can put everything up to and including mergeslash first
-		int spaceNeeded = mergeslash - filename + 1;
-		int spaceRemoved = mergestart - linkbuf;
-
-		if (count - spaceRemoved + spaceNeeded >= MAX_QPATH) {
-			Log::Debug("symlink: too long path rejected\n");
-			return "";
-		}
-
-		memmove(linkbuf + spaceNeeded, linkbuf + spaceRemoved, count - spaceRemoved);
-		memcpy(linkbuf, filename, spaceNeeded);
-		linkbuf[count - spaceRemoved + spaceNeeded] = 0;
-		mergestart = linkbuf;
-	}
-
-	Log::Debug("found symlink: %s → %s", path, mergestart);
-
 	/*
-	if (CheckNastyPath (mergestart, false)) {
-		Log::Debug("symlink: nasty path %s rejected\n", mergestart);
-		return "";
-	}
+		only file symlink is supported, directory symlink is unsupported
+
+		supported file symlink scheme:
+			something → somewhere
+			some/path/something → somewhere
+			some/path/something → ../../some/other/path/somewhere
+			something → ../../../some/path/somewhere
+			
+		unsupported file symlink scheme:
+			some/path/something → some/path/../some/other/path/somewhere
 	*/
 
-	return mergestart;
+	std::size_t pos, rpos;
+	Log::Debug("found symlink: %s → %s", path, content);
+
+	pos = 0;
+	rpos = path.rfind("/", path.size());
+	if (rpos == std::string::npos) {
+
+		rpos = 0;
+	}
+
+	while (content.size() > pos + 3 && content.substr(pos, 3).compare("../") == 0) {
+		if (rpos != 0) {
+			rpos--;
+			}
+		rpos = path.rfind("/", rpos);
+		if (rpos == std::string::npos) {
+
+			rpos = 0;
+	}
+		pos += 3;
+		}
+
+	std::string target = "";
+	target.append(path, 0, rpos);
+	if (rpos != 0) {
+
+
+		target.append("/");
+	}
+	target.append(content, pos, content.size() - pos);
+
+	Log::Debug("resolved symlink: %s → %s", path, target);
+	return target;
 }
 
 const std::string ReadFile(Str::StringRef path, int symlinkLevels, std::error_code& err)
