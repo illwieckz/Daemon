@@ -983,6 +983,187 @@ public:
 			ClearErrorCode(err);
 	}
 
+	std::string ResolveSymlink(Str::StringRef path, Str::StringRef content) const
+	{
+		/*
+			only file symlink is supported, directory symlink is unsupported
+
+			supported file symlink scheme:
+				something → somewhere
+				some/path/something → somewhere
+				some/path/something → ../../some/other/path/somewhere
+				something → ../../../some/path/somewhere
+
+			unsupported file symlink scheme:
+				some/path/something → some/path/../some/other/path/somewhere
+		*/
+
+		std::size_t pos, rpos;
+		Log::Debug("found symlink: %s → %s", path, content);
+
+		pos = 0;
+		rpos = path.rfind("/", path.size());
+		if (rpos == std::string::npos) {
+			// stick on filesystem root if extra ../
+			rpos = 0;
+		}
+
+		while (content.size() > pos + 3 && content.substr(pos, 3).compare("../") == 0) {
+			if (rpos != 0) {
+				rpos--;
+			}
+			rpos = path.rfind("/", rpos);
+			if (rpos == std::string::npos) {
+				// stick on filesystem root if extra ../
+				rpos = 0;
+			}
+			pos += 3;
+		}
+
+		std::string target = "";
+		target.append(path, 0, rpos);
+		if (rpos != 0) {
+			// only append when there is a parent directory
+			// because vfs absolute path does not use leading /
+			target.append("/");
+		}
+		target.append(content, pos, content.size() - pos);
+
+		Log::Debug("resolved symlink: %s", path, target);
+		return target;
+	}
+
+	// Dereference symlink
+	void DereferenceSymlink(std::string originalPath, int symlinkLevels, std::error_code& err) const
+	{
+		if (symlinkLevels == 0) {
+			Log::Warn("symlink: too many levels", originalPath);
+			return;
+		}
+
+		// Open file in zip
+		offset_t length = FileLength(err);
+		if (err) {
+			return;
+		}
+
+		// Read file
+		std::string out;
+		out.resize(length);
+		ReadFile(&out[0], length, err);
+		if (err) {
+			return;
+		}
+
+		std::string target = ResolveSymlink(originalPath, out);
+		if (target[0] == '\0') {
+			return;
+		}
+
+		offset_t fileOffset = 0;
+
+		/*
+		ForEachFile([&originalPath, &fileOffset](Str::StringRef filename, offset_t offset, uint32_t crc) {
+			// Note that 'return' is effectively 'continue' since we are in a lambda
+			if (filename.compare(originalPath) == 0) {
+				fileOffset = offset;
+				return;
+			}
+
+			// silence warning about unused crc parameter
+			crc = crc;
+		}, err);
+		if (err) {
+			return;
+		}
+		*/
+
+		unz_global_info64 globalInfo;
+		int result = unzGetGlobalInfo64(zipFile, &globalInfo);
+		if (result != UNZ_OK) {
+			SetErrorCodeZlib(err, result);
+			return;
+		}
+
+		result = unzGoToFirstFile(zipFile);
+		if (result != UNZ_OK) {
+			SetErrorCodeZlib(err, result);
+			return;
+		}
+
+		for (ZPOS64_T i = 0; i != globalInfo.number_entry; i++) {
+			unz_file_info64 fileInfo;
+			char filename[65537]; // The zip format has a maximum filename size of 64K
+			result = unzGetCurrentFileInfo64(zipFile, &fileInfo, filename, sizeof(filename), nullptr, 0, nullptr, 0);
+			if (result != UNZ_OK) {
+				SetErrorCodeZlib(err, result);
+				return;
+			}
+			offset_t offset = unzGetOffset64(zipFile);
+
+			if (originalPath.compare(filename) == 0) {
+				fileOffset = offset;
+				break;
+			}
+
+			if (i + 1 != globalInfo.number_entry) {
+				result = unzGoToNextFile(zipFile);
+				if (result != UNZ_OK) {
+					SetErrorCodeZlib(err, result);
+					return;
+				}
+			}
+		}
+
+		if (fileOffset == 0) {
+			return;
+		}
+
+		// Close file and check for CRC errors
+		CloseFile(err);
+		if (err) {
+			return;
+		}
+
+		// Read file contents
+		OpenFile(fileOffset, err);
+		if (err) {
+			return;
+		}
+
+		// Open file in zip
+		length = FileLength(err);
+		if (err) {
+			return;
+		}
+
+		// Read file
+		out.resize(length);
+		ReadFile(&out[0], length, err);
+		if (err) {
+			return;
+		}
+
+		DereferenceSymlink(originalPath, symlinkLevels, err);
+		if (err) {
+			return;
+		}
+
+		// Read file contents
+		OpenFile(fileOffset, err);
+		if (err) {
+			return;
+		}
+	}
+
+	void DereferenceSymlink(std::string originalPath, std::error_code& err) const
+	{
+		DereferenceSymlink(originalPath, MAX_SYMLINK_LEVELS, err);
+		if (err) {
+			return;
+		}
+	}
+
 private:
 	unzFile zipFile;
 };
@@ -1287,56 +1468,6 @@ const std::vector<LoadedPakInfo>& GetLoadedPaks()
 	return loadedPaks;
 }
 
-const std::string ResolveSymlink(Str::StringRef path, Str::StringRef content)
-{
-	/*
-		only file symlink is supported, directory symlink is unsupported
-
-		supported file symlink scheme:
-			something → somewhere
-			some/path/something → somewhere
-			some/path/something → ../../some/other/path/somewhere
-			something → ../../../some/path/somewhere
-			
-		unsupported file symlink scheme:
-			some/path/something → some/path/../some/other/path/somewhere
-	*/
-
-	std::size_t pos, rpos;
-	Log::Debug("found symlink: %s → %s", path, content);
-
-	pos = 0;
-	rpos = path.rfind("/", path.size());
-	if (rpos == std::string::npos) {
-		// stick on filesystem root if extra ../
-		rpos = 0;
-	}
-
-	while (content.size() > pos + 3 && content.substr(pos, 3).compare("../") == 0) {
-		if (rpos != 0) {
-			rpos--;
-		}
-		rpos = path.rfind("/", rpos);
-		if (rpos == std::string::npos) {
-			// stick on filesystem root if extra ../
-			rpos = 0;
-		}
-		pos += 3;
-	}
-
-	std::string target = "";
-	target.append(path, 0, rpos);
-	if (rpos != 0) {
-		// only append when there is a parent directory
-		// because vfs absolute path does not use leading /
-		target.append("/");
-	}
-	target.append(content, pos, content.size() - pos);
-
-	Log::Debug("resolved symlink: %s → %s", path, target);
-	return target;
-}
-
 const std::string ReadZipFile(LoadedPakInfo pak, ZipArchive *zipFile, Str::StringRef originalPath, Str::StringRef path, int symlinkLevels, std::error_code& err)
 {
 	auto it = fileMap.find(path);
@@ -1370,6 +1501,19 @@ const std::string ReadZipFile(LoadedPakInfo pak, ZipArchive *zipFile, Str::Strin
 		return "";
 	}
 
+	if (isSymlink) {
+		if (!UsePakSymlink()) {
+			Log::Warn("symlink found in archive but fs_pakSymlink is disabled: %s", path);
+		}
+
+		Log::Debug("found symlink: %s", path);
+		zipFile->DereferenceSymlink(path, err);
+
+		if (err) {
+			return "";
+		}
+	}
+
 	// Open file in zip
 	offset_t length = zipFile->FileLength(err);
 
@@ -1386,6 +1530,7 @@ const std::string ReadZipFile(LoadedPakInfo pak, ZipArchive *zipFile, Str::Strin
 		return "";
 	}
 
+/*
 	if (isSymlink) {
 		if (UsePakSymlink()) {
 			if (symlinkLevels <= 0) {
@@ -1417,6 +1562,7 @@ const std::string ReadZipFile(LoadedPakInfo pak, ZipArchive *zipFile, Str::Strin
 			return "";
 		}
 	}
+	*/
 
 	return out;
 }
@@ -1474,7 +1620,7 @@ std::string ReadFile(Str::StringRef path, std::error_code& err)
 			return "";
 		}
 
-	return out;
+		return out;
 	}
 
 	ASSERT_UNREACHABLE();
