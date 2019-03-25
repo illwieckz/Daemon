@@ -1404,6 +1404,25 @@ static bool LoadMap( shaderStage_t *stage, const char *buffer, const int bundleI
 		return true;
 	}
 
+	// TB_COLORMAP == TB_DIFFUSEMAP == TB_REFLECTIONMAP
+	if ( bundleIndex == TB_COLORMAP
+		|| bundleIndex == TB_SPECULARMAP
+		|| bundleIndex == TB_GLOWMAP
+		)
+	{
+		if ( stage->type == stageType_t::ST_COLORMAP
+			|| stage->type == stageType_t::ST_DIFFUSEMAP
+			|| stage->type == stageType_t::ST_SPECULARMAP
+			|| stage->type == stageType_t::ST_GLOWMAP
+			|| stage->type == stageType_t::ST_REFLECTIONMAP
+			|| stage->type == stageType_t::ST_SKYBOXMAP
+			|| stage->collapseType != collapseType_t::COLLAPSE_none
+			)
+		{
+			imageBits |= IF_SRGB;
+		}
+	}
+
 	// determine image options
 	if ( stage->overrideNoPicMip || shader.noPicMip || stage->highQuality || stage->forceHighQuality )
 	{
@@ -5397,6 +5416,11 @@ shader_t       *R_FindShader( const char *name, shaderType_t type,
 		bits |= IF_NOLIGHTSCALE;
 
 	Log::Debug( "loading '%s' image as shader", fileName );
+
+	if ( shader.type != shaderType_t::SHADER_LIGHT )
+	{
+		bits |= IF_SRGB;
+	}
 
 	// choosing filter based on the NOMIP flag seems strange,
 	// maybe it should be changed to type == SHADER_2D

@@ -719,6 +719,70 @@ void GL_VertexAttribPointers( uint32_t attribBits )
 	}
 }
 
+GLint GL_ToSRGB( GLint internalFormat, bool isSRGB )
+{
+	if ( !isSRGB )
+	{
+		return internalFormat;
+	}
+
+	switch ( internalFormat )
+	{
+		case GL_RGB:
+			return GL_SRGB;
+		case GL_RGBA:
+			return GL_SRGB_ALPHA;
+		case GL_RGB8:
+			return GL_SRGB8;
+		case GL_RGBA8:
+			return GL_SRGB8_ALPHA8;
+		// not used
+		// case GL_COMPRESSED_RGB:
+		// 	return GL_COMPRESSED_SRGB;
+		case GL_COMPRESSED_RGBA:
+			return GL_COMPRESSED_SRGB_ALPHA;
+		// not used, core 4.2, ARB_texture_compression_bptc
+		// case GL_COMPRESSED_RGBA_BPTC_UNORM:
+		// 	return GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM;
+		case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
+			return GL_COMPRESSED_SRGB_S3TC_DXT1_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
+		default:
+			return internalFormat;
+	}
+}
+
+void GL_TexImage2D( GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void * data, bool isSRGB )
+{
+	GLint finalFormat = GL_ToSRGB( internalFormat, isSRGB );
+
+	glTexImage2D( target, level, finalFormat, width, height, border, format, type, data );
+
+	if ( isSRGB && finalFormat == internalFormat )
+	{
+		// FIXME: implement conversion
+		Log::Warn( "Missing sRGB conversion for GL format: %d", internalFormat );
+	}
+}
+
+void GL_TexImage3D( GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void * data, bool isSRGB )
+{
+	GLint finalFormat = GL_ToSRGB( internalFormat, isSRGB );
+
+	glTexImage3D( target, level, finalFormat, width, height, depth, border, format, type, data );
+
+	if ( isSRGB && finalFormat == internalFormat )
+	{
+		// FIXME: implement conversion
+		Log::Warn( "Missing sRGB conversion for GL format: %d", internalFormat );
+	}
+}
+
 /*
 ================
 RB_Hyperspace

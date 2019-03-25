@@ -797,6 +797,7 @@ void R_UploadImage( const byte **dataArray, int numLayers, int numMips,
 	GLenum     target;
 	GLenum     format = GL_RGBA;
 	GLenum     internalFormat = GL_RGB;
+	bool       isSRGB = image->bits & IF_SRGB;
 
 	static const vec4_t oneClampBorder = { 1, 1, 1, 1 };
 	static const vec4_t zeroClampBorder = { 0, 0, 0, 1 };
@@ -1042,9 +1043,7 @@ void R_UploadImage( const byte **dataArray, int numLayers, int numMips,
 		mipLayers = numLayers;
 
 		for( i = 0; i < numMips; i++ ) {
-			glTexImage3D( GL_TEXTURE_3D, i, internalFormat,
-				      scaledWidth, scaledHeight, mipLayers,
-				      0, format, GL_UNSIGNED_BYTE, nullptr );
+			GL_TexImage3D( GL_TEXTURE_3D, i, internalFormat, scaledWidth, scaledHeight, mipLayers, 0, format, GL_UNSIGNED_BYTE, nullptr, isSRGB );
 
 			if( mipWidth  > 1 ) mipWidth  >>= 1;
 			if( mipHeight > 1 ) mipHeight >>= 1;
@@ -1110,18 +1109,17 @@ void R_UploadImage( const byte **dataArray, int numLayers, int numMips,
 				}
 				break;
 			case GL_TEXTURE_CUBE_MAP:
-				glTexImage2D( target + i, 0, internalFormat, scaledWidth, scaledHeight, 0, format, GL_UNSIGNED_BYTE,
-				              scaledBuffer );
+				GL_TexImage2D( target + i, 0, internalFormat, scaledWidth, scaledHeight, 0, format, GL_UNSIGNED_BYTE, scaledBuffer, isSRGB );
 				break;
 
 			default:
 				if ( image->bits & IF_PACKED_DEPTH24_STENCIL8 )
 				{
-					glTexImage2D( target, 0, internalFormat, scaledWidth, scaledHeight, 0, format, GL_UNSIGNED_INT_24_8, nullptr );
+					GL_TexImage2D( target, 0, internalFormat, scaledWidth, scaledHeight, 0, format, GL_UNSIGNED_INT_24_8, nullptr, isSRGB );
 				}
 				else
 				{
-					glTexImage2D( target, 0, internalFormat, scaledWidth, scaledHeight, 0, format, GL_UNSIGNED_BYTE, scaledBuffer );
+					GL_TexImage2D( target, 0, internalFormat, scaledWidth, scaledHeight, 0, format, GL_UNSIGNED_BYTE, scaledBuffer, isSRGB );
 				}
 
 				break;
@@ -1477,7 +1475,9 @@ image_t *R_CreateGlyph( const char *name, const byte *pic, int width, int height
 	image->uploadHeight = height;
 	image->internalFormat = GL_RGBA;
 
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pic );
+	bool isSRGB = true;
+
+	GL_TexImage2D( GL_TEXTURE_2D, 0, image->internalFormat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pic, isSRGB );
 
 	GL_CheckErrors();
 
@@ -1517,7 +1517,7 @@ image_t        *R_CreateCubeImage( const char *name,
 	image->width = width;
 	image->height = height;
 
-	image->bits = bits;
+	image->bits = bits | IF_SRGB;
 	image->filterType = filterType;
 	image->wrapType = wrapType;
 
@@ -2747,7 +2747,7 @@ static void R_CreateColorGradeImage()
 					      REF_COLORGRADEMAP_SIZE,
 					      REF_COLORGRADEMAP_SIZE,
 					      REF_COLORGRADE_SLOTS * REF_COLORGRADEMAP_SIZE,
-					      IF_NOPICMIP | IF_NOLIGHTSCALE,
+					      IF_NOPICMIP | IF_NOLIGHTSCALE | IF_SRGB,
 					      filterType_t::FT_LINEAR,
 						  wrapTypeEnum_t::WT_EDGE_CLAMP );
 
@@ -2972,5 +2972,5 @@ qhandle_t RE_GenerateTexture( const byte *pic, int width, int height )
 {
 	const char *name = va( "rocket%d", numTextures++ );
 	R_SyncRenderThread();
-	return RE_RegisterShaderFromImage( name, R_CreateImage( name, &pic, width, height, 1, IF_NOPICMIP, filterType_t::FT_LINEAR, wrapTypeEnum_t::WT_CLAMP ) );
+	return RE_RegisterShaderFromImage( name, R_CreateImage( name, &pic, width, height, 1, IF_NOPICMIP | IF_SRGB, filterType_t::FT_LINEAR, wrapTypeEnum_t::WT_CLAMP ) );
 }

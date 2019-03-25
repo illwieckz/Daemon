@@ -512,6 +512,7 @@ static inline void halfToFloat( const f16vec4_t in, vec4_t out )
 	{
 	  IF_NONE,
 	  IF_NOPICMIP = BIT( 0 ),
+	  IF_SRGB = BIT( 1 ),
 	  IF_NORMALMAP = BIT( 2 ),
 	  IF_RGBA16F = BIT( 3 ),
 	  IF_RGBA32F = BIT( 4 ),
@@ -3112,6 +3113,9 @@ static inline void halfToFloat( const f16vec4_t in, vec4_t out )
 	void GL_VertexAttribsState( uint32_t stateBits );
 	void GL_VertexAttribPointers( uint32_t attribBits );
 	void GL_Cull( cullType_t cullType );
+	GLint GL_ToSRGB( GLint internalFormat, bool isSRGB );
+	void GL_TexImage2D( GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void * data, bool isSRGB );
+	void GL_TexImage3D( GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void * data, bool isSRGB );
 	void R_ShutdownBackend();
 
 	/*
