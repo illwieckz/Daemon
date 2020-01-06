@@ -1,25 +1,26 @@
-------------------------------------------------------------- Daemon License ---
-Daemon is licensed under the NEW BSD LICENSE. This license is contained in
-full in the file named LICENSE.txt. Please be aware of the exceptions to this
+-------------------------------------------------------- Daemon Code License ---
+The Daemon code is licensed under the NEW BSD LICENSE. This license is contained
+in full in the file named LICENSE.txt. Please be aware of the exceptions to this
 license as listed below.
 
+
 ---------------------------------------------------- Code License Exceptions ---
-The following files contain sections of code that are not licensed under the
-GPL, but are nevertheless GPL compatible. The license text for these licenses
-is contained within the files as listed.
+Some files contain sections of code that are licensed under the GNU GENERAL
+PUBLIC LICENSE Version 3. This license is contained in full in the file named
+GPL.txt.
 
-    src/libs/minizip/*                                          zlib license
+Other files contains sections of code that are are not licensed under the BSD
+or the GPL but are nevertheless BSD and GPL compatible. The license text for
+these licenses is contained within the files as listed.
 
---------------------------------------------------------------------------------
+Because of the sections of code licensed under the GNU GENERAL PUBLIC LICENCE,
+a Daemon binary is licensed under the GPL.
 
 
 ------------------------------------------------------ ET-XreaL Code License ---
 The ET-XreaL code is licensed under the GNU GENERAL PUBLIC LICENSE. This
 license is contained in full in the file named GPL.txt. Please be aware of
 the exceptions to this license as listed below.
-
--------- Code License Exceptions - The parts that are not covered by the GPL ---
-See GPL.txt for the GNU GENERAL PUBLIC LICENSE
 
 ADDITIONAL TERMS: The Wolfenstein: Enemy Territory GPL Source Code is also
 subject to certain additional terms. You should have received a copy of
@@ -38,7 +39,7 @@ and complying with the applicable license terms.
 --------------------------------------------------------------- zlib license ---
 IO on .zip files using portions of zlib
 
-    src/libs/minizip/*
+    libs/minizip/*
 
 Copyright (C) 1998 Gilles Vollant
 zlib is Copyright (C) 1995-1998 Jean-loup Gailly and Mark Adler
