@@ -1,0 +1,40 @@
+--------------------------------------------------- Contributed Code License ---
+
+Unless otherwise stated, the Daemon code is licensed under the NEW BSD LICENSE.
+This license is contained in full in the file named LICENSE.txt.
+
+Unless otherwise stated, contributed code to the Daemon code under the NEW BSD
+LICENSE is licensed under the NEW BSD LICENSE.
+
+Some sections of the Daemon code is licensed under the GNU GENERAL PUBLIC
+LICENSE Version 3, and additional terms may apply. This license with additional
+terms is contained in full in the file named GPL.txt.
+
+See COPYING.txt for more information about code licenses and code license
+exceptions.
+
+Unless otherwise stated, contributions to the sections of the Daemon code
+licensed under the GNU GENERAL PUBLIC LICENSE Version 3 is licensed under
+both the GNU GENERAL PUBLIC LICENSE Version 3 and the NEW BSD LICENSE.
+
+Unless otherwise stated, contributions to the sections of the Daemon code
+licensed under any other license is licensed under both that other license and
+the NEW BSD LICENSE.
+
+Unless otherwise stated, contributions to the sections of the Daemon code
+licensed under any license with any additional term is contributed under the
+same license with related additional term applied and the NEW BSD LICENSE.
+
+By contributing original code to the Daemon code and unless otherwise stated
+someone licenses the contributed code under the NEW BSD LICENSE and, if that
+portion is licensed under another license and/or is subject to additional term,
+ under that license and under such additional term if exist.
+
+Non-original code contributed to Daemon code must be compatible with the NEW BSD
+LICENSE and with the GNU GENERAL PUBLIC LICENSE Version 3 and with the
+additional terms to the GNU GENERAL PUBLIC LICENSE Version 3 following the terms
+and conditions of the GNU GPL as stated in the GPL.txt file.
+
+Non-original contributed code not licensed under the NEW BSD LICENSE, including
+non-original code licensed under the GNU GENERAL PUBLIC LICENSE must explicitely
+state such license.

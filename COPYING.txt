@@ -4,6 +4,11 @@ in full in the file named LICENSE.txt. Please be aware of the exceptions to this
 license as listed below.
 
 
+--------------------------------------------------- Contributed Code License ---
+Unless otherwise stated, contributed code is licensed under the NEW BSD LICENSE.
+See the file named CONTRIBUTING.txt for more information on that topic.
+
+
 ---------------------------------------------------- Code License Exceptions ---
 Some files contain sections of code that are licensed under the GNU GENERAL
 PUBLIC LICENSE Version 3. This license is contained in full in the file named
