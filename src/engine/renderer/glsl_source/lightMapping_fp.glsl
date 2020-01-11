@@ -60,6 +60,8 @@ void	main()
 	// compute the diffuse term
 	vec4 diffuse = texture2D(u_DiffuseMap, texCoords);
 
+	diffuse.rgb = fromSRGB(diffuse.rgb);
+
 	if( abs(diffuse.a + u_AlphaThreshold) <= 1.0 )
 	{
 		discard;
@@ -99,6 +101,8 @@ void	main()
 #if defined(r_glowMapping)
 	color.rgb += texture2D(u_GlowMap, texCoords).rgb;
 #endif // r_glowMapping
+
+	color.rgb = toSRGB(color.rgb);
 
 	outputColor = color;
 

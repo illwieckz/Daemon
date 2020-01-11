@@ -27,6 +27,16 @@ struct light {
   vec4  direction_angle;
 };
 
+vec3 fromSRGB(vec3 color) {
+	float gamma = 2.2;
+	return pow(color, vec3(gamma));
+}
+
+vec3 toSRGB(vec3 color) {
+	float gamma = 2.2;
+	return pow(color, vec3(1/gamma));
+}
+
 #ifdef HAVE_ARB_uniform_buffer_object
 layout(std140) uniform u_Lights {
   light lights[ MAX_REF_LIGHTS ];
@@ -103,6 +113,7 @@ void computeLight( vec3 lightDir, vec3 normal, vec3 viewDir, vec3 lightColor,
 
   accumulator.xyz += diffuseColor.xyz * lightColor.xyz * NdotL;
 #if defined(r_specularMapping) && !defined(USE_PHYSICAL_SHADING)
+  materialColor.xyz = fromSRGB( materialColor.xyz );
   accumulator.xyz += materialColor.xyz * lightColor.xyz * pow( NdotH, u_SpecularExponent.x * materialColor.w + u_SpecularExponent.y) * r_SpecularScale;
 #endif // r_specularMapping && !USE_PHYSICAL_SHADING&
 #endif // !r_physicalMapping || !USE_PHYSICAL_SHADING
