@@ -141,8 +141,6 @@ void	main()
 	color.rgb += texture2D(u_GlowMap, texCoords).rgb;
 #endif // r_glowMapping
 
-	color.rgb = toSRGB(color.rgb);
-
 	outputColor = color;
 
 // Debugging

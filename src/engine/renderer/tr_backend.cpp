@@ -3215,7 +3215,7 @@ void RB_CameraPostFX()
 	gl_cameraEffectsShader->SetUniform_ColorModulate( backEnd.viewParms.gradingWeights );
 	gl_cameraEffectsShader->SetUniform_ModelViewProjectionMatrix( glState.modelViewProjectionMatrix[ glState.stackIndex ] );
 
-	gl_cameraEffectsShader->SetUniform_InverseGamma( 1.0 / r_gamma->value );
+	gl_cameraEffectsShader->SetUniform_InverseGamma( 1.0 / ( r_gamma->value * 2.2 ) );
 
 	// This shader is run last, so let it render to screen instead of
 	// tr.mainFBO

@@ -32,11 +32,6 @@ vec3 fromSRGB(vec3 color) {
 	return pow(color, vec3(gamma));
 }
 
-vec3 toSRGB(vec3 color) {
-	float gamma = 2.2;
-	return pow(color, vec3(1/gamma));
-}
-
 #ifdef HAVE_ARB_uniform_buffer_object
 layout(std140) uniform u_Lights {
   light lights[ MAX_REF_LIGHTS ];
