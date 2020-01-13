@@ -285,6 +285,12 @@ void R_ImageList_f()
 				imageDataSize *= 8;
 				break;
 
+			case GL_COMPRESSED_RG_RGTC2:
+				Com_sprintf( buffer, sizeof( buffer ),  "RGTC2   " );
+				out += buffer;
+				imageDataSize *= 2;
+				break;
+
 			case GL_RG16F:
 				Com_sprintf( buffer, sizeof( buffer ),  "RG16F   " );
 				out += buffer;
