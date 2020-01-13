@@ -161,7 +161,7 @@ void R_ImageList_f()
 	};
 	const char *filter = ri.Cmd_Argc() > 1 ? ri.Cmd_Argv(1) : nullptr;
 
-	Log::Notice("\n      -w-- -h-- -mm- -type- -if---- -swrap- -twrap-- -name--------" );
+	Log::Notice("\n      -w-- -h-- -mm- -type- -if---- -srgb-- -swrap- -twrap-- -name--------" );
 
 	texels = 0;
 	dataSize = 0;
@@ -357,6 +357,23 @@ void R_ImageList_f()
 				imageDataSize *= 4;
 				break;
 		}
+
+		if ( image->bits & IF_SRGB )
+		{
+			if ( image->internalFormat != GL_ToSRGB( image->internalFormat, true ) )
+			{
+				Com_sprintf( buffer, sizeof( buffer ),  "yes     " );
+			}
+			else
+			{
+				Com_sprintf( buffer, sizeof( buffer ),  "convert " );
+			}
+		}
+		else
+		{
+				Com_sprintf( buffer, sizeof( buffer ),  "no      " );
+		}
+		out += buffer;
 
 		switch ( image->wrapType.s )
 		{
