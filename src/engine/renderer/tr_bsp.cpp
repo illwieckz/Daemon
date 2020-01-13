@@ -447,6 +447,14 @@ R_LoadLightmaps
 static const int LIGHTMAP_SIZE = 128;
 static void R_LoadLightmaps( lump_t *l, const char *bspName )
 {
+	int lightmapBits = IF_LIGHTMAP;
+	int deluxemapBits = IF_NORMALMAP;
+
+	if ( tr.worldSRGB )
+	{
+		lightmapBits |= IF_SRGB;
+	}
+
 	tr.fatLightmapSize = 0;
 	int len = l->filelen;
 	if ( !len )
@@ -472,6 +480,8 @@ static void R_LoadLightmaps( lump_t *l, const char *bspName )
 			int  width, height;
 			byte *ldrImage;
 
+			lightmapBits |= IF_NOPICMIP;
+
 			for ( int i = 0; i < numLightmaps; i++ )
 			{
 				Log::Debug("...loading external lightmap as RGB8 LDR '%s/%s'", mapName, lightmapFiles[ i ] );
@@ -479,7 +489,7 @@ static void R_LoadLightmaps( lump_t *l, const char *bspName )
 				width = height = 0;
 				LoadRGBEToBytes( va( "%s/%s", mapName, lightmapFiles[ i ] ), &ldrImage, &width, &height );
 
-				auto image = R_CreateImage( va( "%s/%s", mapName, lightmapFiles[ i ] ), (const byte **)&ldrImage, width, height, 1, IF_NOPICMIP | IF_LIGHTMAP, filterType_t::FT_DEFAULT, wrapTypeEnum_t::WT_CLAMP );
+				auto image = R_CreateImage( va( "%s/%s", mapName, lightmapFiles[ i ] ), (const byte **)&ldrImage, width, height, 1, lightmapBits, filterType_t::FT_DEFAULT, wrapTypeEnum_t::WT_CLAMP );
 
 				Com_AddToGrowList( &tr.lightmaps, image );
 
@@ -498,7 +508,7 @@ static void R_LoadLightmaps( lump_t *l, const char *bspName )
 
 				for (int i = 0; i < numLightmaps; i++) {
 					Log::Debug("...loading external lightmap '%s/%s'", mapName, lightmapFiles[i]);
-					auto image = R_FindImageFile(va("%s/%s", mapName, lightmapFiles[i]), IF_NORMALMAP, filterType_t::FT_DEFAULT, wrapTypeEnum_t::WT_CLAMP);
+					auto image = R_FindImageFile(va("%s/%s", mapName, lightmapFiles[i]), deluxemapBits, filterType_t::FT_DEFAULT, wrapTypeEnum_t::WT_CLAMP);
 					Com_AddToGrowList(&tr.deluxemaps, image);
 				}
 			}
@@ -521,10 +531,10 @@ static void R_LoadLightmaps( lump_t *l, const char *bspName )
 				Log::Debug("...loading external lightmap '%s/%s'", mapName, lightmapFiles[i]);
 
 				if (!tr.worldDeluxeMapping || i % 2 == 0) {
-					auto image = R_FindImageFile(va("%s/%s", mapName, lightmapFiles[i]), IF_LIGHTMAP, filterType_t::FT_LINEAR, wrapTypeEnum_t::WT_CLAMP);
+					auto image = R_FindImageFile(va("%s/%s", mapName, lightmapFiles[i]), lightmapBits, filterType_t::FT_LINEAR, wrapTypeEnum_t::WT_CLAMP);
 					Com_AddToGrowList(&tr.lightmaps, image);
 				} else {
-					auto image = R_FindImageFile(va("%s/%s", mapName, lightmapFiles[i]), IF_NORMALMAP, filterType_t::FT_LINEAR, wrapTypeEnum_t::WT_CLAMP);
+					auto image = R_FindImageFile(va("%s/%s", mapName, lightmapFiles[i]), deluxemapBits, filterType_t::FT_LINEAR, wrapTypeEnum_t::WT_CLAMP);
 					Com_AddToGrowList(&tr.deluxemaps, image);
 				}
 			}
@@ -607,7 +617,7 @@ static void R_LoadLightmaps( lump_t *l, const char *bspName )
 
 		tr.fatLightmap = R_CreateImage( va( "_fatlightmap%d", 0 ), (const byte **)&fatbuffer,
 						tr.fatLightmapSize, tr.fatLightmapSize, 1,
-						IF_LIGHTMAP, filterType_t::FT_DEFAULT, wrapTypeEnum_t::WT_CLAMP );
+						lightmapBits, filterType_t::FT_DEFAULT, wrapTypeEnum_t::WT_CLAMP );
 		Com_AddToGrowList( &tr.lightmaps, tr.fatLightmap );
 
 		ri.Hunk_FreeTempMemory( fatbuffer );
@@ -4285,6 +4295,14 @@ void R_LoadEntities( lump_t *l )
 				tr.worldDeluxeMapping = true;
 			}
 
+			s = strstr( value, "-sRGBlight" );
+
+			if ( s )
+			{
+				Log::Debug("map features sRGB light mapping" );
+				tr.worldSRGB = true;
+			}
+
 			continue;
 		}
 
@@ -6755,6 +6773,7 @@ void RE_LoadWorldMap( const char *name )
 
 	// tr.worldDeluxeMapping will be set by R_LoadEntities()
 	tr.worldDeluxeMapping = false;
+	tr.worldSRGB = false;
 	tr.worldHDR_RGBE = false;
 
 	Com_Memset( &s_worldData, 0, sizeof( s_worldData ) );

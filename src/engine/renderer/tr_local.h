@@ -2572,6 +2572,7 @@ static inline void halfToFloat( const f16vec4_t in, vec4_t out )
 
 		bool   worldMapLoaded;
 		bool   worldDeluxeMapping;
+		bool   worldSRGB;
 		bool   worldHDR_RGBE;
 		world_t    *world;
 
