@@ -33,8 +33,8 @@ static_assert(std::is_pod<GLBinaryHeader>::value, "Value must be a pod while cod
 // Tangent space normal maps use the angle in the xy-plane as a position on the color wheel and
 // (1 - z) as the saturation, with a constant lightness.
 static Cvar::Range<Cvar::Cvar<int>> r_showNormalMaps(
-	"r_showNormalMaps", "show normals as colors. 1 = world space, 2 = tangent space",
-	Cvar::CHEAT | Cvar::LATCH, 0, 0, 2);
+	"r_showNormalMaps", "show normals as colors. 1 = world space, 2 = tangent space, 3 = generated file, 4 = raw file",
+	Cvar::CHEAT | Cvar::LATCH, 0, 0, 4);
 
 extern std::unordered_map<std::string, std::string> shadermap;
 // shaderKind's value will be determined later based on command line setting or absence of.

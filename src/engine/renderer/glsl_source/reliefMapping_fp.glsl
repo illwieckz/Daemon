@@ -75,11 +75,13 @@ vec3 NormalInTangentSpace(vec2 texNormal)
 	// take the square root of a negative number here.
 	normal.z = sqrt(max(0, 1.0 - dot(normal.xy, normal.xy)));
 #endif // !USE_HEIGHTMAP_IN_NORMALMAP
+#if r_showNormalMaps != 4
 	// HACK: 0 normal Z channel can't be good
 	if (u_NormalScale.z != 0)
 	{
 		normal *= u_NormalScale;
 	}
+#endif // r_showNormalMaps != 4
 #else // !r_normalMapping
 	normal = vec3(0.5, 0.5, 1.0);
 #endif // !r_normalMapping
@@ -93,7 +95,12 @@ vec3 NormalInWorldSpace(vec2 texNormal, mat3 tangentToWorldMatrix)
 	// compute normal in tangent space from normalmap
 	vec3 normal = NormalInTangentSpace(texNormal);
 	// transform normal into world space
+
+#if r_showNormalMaps == 3 || r_showNormalMaps == 4
+	return normal;
+#else // r_showNormalMaps != 3 &&  r_showNormalMaps != 4
 	return normalize(tangentToWorldMatrix * normal);
+#endif // r_showNormalMaps != 3 &&  r_showNormalMaps != 4
 }
 
 #if defined(USE_PARALLAX_MAPPING)
@@ -173,6 +180,7 @@ vec2 ParallaxTexOffset(vec2 rayStartTexCoords, vec3 viewDir, mat3 tangentToWorld
 }
 #endif // USE_PARALLAX_MAPPING
 
+#if r_showNormalMaps == 2
 // Slow, should be used only for debugging
 // All arguments should be in [0, 1]
 // https://en.wikipedia.org/w/index.php?title=HSL_and_HSV&oldid=936097527#HSL_to_RGB
@@ -202,3 +210,4 @@ vec3 NormalInTangentSpaceAsColor(vec2 texNormal)
 	float saturation = 1.0 - normal.z;
 	return hsl2rgb(hue, saturation, 0.5);
 }
+#endif // r_showNormalMaps == 2
