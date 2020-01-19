@@ -1815,6 +1815,17 @@ static bool ParseStage( shaderStage_t *stage, const char **text )
 				loadMap = true;
 			}
 		}
+
+/*
+===========================================================================
+Daemon BSD Source Code Section
+Copyright (c) 2019-2020, Daemon Developers
+All rights reserved.
+
+This license is contained in full in the file named LICENSE.txt.
+===========================================================================
+*/
+
 		// collapsed diffuse stage enables implicit lightmap
 		else if ( !Q_stricmp( token, "diffuseMap" ) )
 		{
@@ -1934,6 +1945,13 @@ static bool ParseStage( shaderStage_t *stage, const char **text )
 		else if ( !Q_stricmp( token, "attenuationMapXY" ) )
 		else if ( !Q_stricmp( token, "attenuationMapZ" ) )
 		*/
+
+/*
+===========================================================================
+End of Daemon BSD Source Code Section
+===========================================================================
+*/
+
 		// lightmap <name>
 		else if ( !Q_stricmp( token, "lightmap" ) )
 		{
@@ -2827,6 +2845,17 @@ static bool ParseStage( shaderStage_t *stage, const char **text )
 		{
 			ParseExpression( text, &stage->fresnelBiasExp );
 		}
+
+/*
+===========================================================================
+Daemon BSD Source Code Section
+Copyright (c) 2019-2020, Daemon Developers
+All rights reserved.
+
+This license is contained in full in the file named LICENSE.txt.
+===========================================================================
+*/
+
 		// normalScale <float> <float> <float>
 		//
 		// for compatibility purpose, ioq3gl2 syntax is supported:
@@ -2877,6 +2906,13 @@ static bool ParseStage( shaderStage_t *stage, const char **text )
 			SkipRestOfLine( text );
 			continue;
 		}
+
+/*
+===========================================================================
+End of Daemon BSD Source Code Section
+===========================================================================
+*/
+
 		// normalIntensity <arithmetic expression>
 		else if ( !Q_stricmp( token, "normalIntensity" ) )
 		{
@@ -4365,6 +4401,16 @@ SHADER OPTIMIZATION AND FOGGING
 */
 
 /*
+===========================================================================
+Daemon BSD Source Code Section
+Copyright (c) 2019-2020, Daemon Developers
+All rights reserved.
+
+This license is contained in full in the file named LICENSE.txt.
+===========================================================================
+*/
+
+/*
 ================
 CollapseMultitexture
 =================
@@ -4686,6 +4732,12 @@ static void CollapseStages()
 
 	shader.numStages = numActiveStages;
 }
+
+/*
+===========================================================================
+End of Daemon BSD Source Code Section
+===========================================================================
+*/
 
 // *INDENT-ON*
 

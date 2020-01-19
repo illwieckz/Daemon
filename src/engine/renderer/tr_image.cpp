@@ -1972,6 +1972,16 @@ static void R_FreeCubePics( byte **pic, int count )
 	}
 }
 
+/*
+===========================================================================
+Daemon BSD Source Code Section
+Copyright (c) 2019-2020, Daemon Developers
+All rights reserved.
+
+This license is contained in full in the file named LICENSE.txt.
+===========================================================================
+*/
+
 struct cubeMapLoader_t
 {
 	const char *ext;
@@ -2197,6 +2207,12 @@ image_t *R_FindCubeImage( const char *imageName, int bits, filterType_t filterTy
 
 	return nullptr;
 }
+
+/*
+===========================================================================
+End of Daemon BSD Source Code Section
+===========================================================================
+*/
 
 /*
 =================
