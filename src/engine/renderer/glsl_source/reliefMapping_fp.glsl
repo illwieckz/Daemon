@@ -203,10 +203,14 @@ vec3 NormalInTangentSpaceAsColor(vec2 texNormal)
 {
 	vec3 normal = NormalInTangentSpace(texNormal);
 	if (normal.x == 0.0)
+	{
 		normal.x = 1e-30;
-	float hue = atan(normal.y, normal.x/) / (2.0 * M_PI);
+	}
+	float hue = atan(normal.y, normal.x) / (2.0 * M_PI);
 	if (hue < 0.0)
+	{
 		hue += 1.0;
+	}
 	float saturation = 1.0 - normal.z;
 	return hsl2rgb(hue, saturation, 0.5);
 }
