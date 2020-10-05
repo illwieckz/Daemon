@@ -2758,7 +2758,7 @@ void RB_RunVisTests( )
 	}
 }
 
-void RB_RenderPostDepth()
+void RB_RenderPostDepthLightTile()
 {
 	static vec4_t quadVerts[4] = {
 		{ -1.0f, -1.0f, 0.0f, 1.0f },
@@ -2769,7 +2769,7 @@ void RB_RenderPostDepth()
 	vec3_t zParams;
 	int w, h;
 
-	GLimp_LogComment( "--- RB_RenderPostDepth ---\n" );
+	GLimp_LogComment( "--- RB_RenderPostDepthLightTile ---\n" );
 
 	if ( ( backEnd.refdef.rdflags & RDF_NOWORLDMODEL ) )
 	{
@@ -4656,7 +4656,20 @@ static void RB_RenderView( bool depthPass )
 	if( depthPass ) {
 		RB_RenderDrawSurfaces( shaderSort_t::SS_DEPTH, shaderSort_t::SS_DEPTH, DRAWSURFACES_ALL );
 		RB_RunVisTests();
-		RB_RenderPostDepth();
+
+		/* Do not run lightTile code when the tiled renderer is not used.
+
+		Especially since the related GLSL code cannot run an the small
+		Radeon R300 ALU and such GPU are so old and slow any kind of
+		dynamic lighting including the tiled implementation is expected
+		to be disabled.
+
+		See https://github.com/DaemonEngine/Daemon/issues/344 */
+		if ( r_dynamicLight->integer == 2 )
+		{
+			RB_RenderPostDepthLightTile();
+		}
+
 		return;
 	}
 
