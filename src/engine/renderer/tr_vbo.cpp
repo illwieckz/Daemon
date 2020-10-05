@@ -1012,7 +1012,10 @@ void R_InitVBOs()
 
 
 	R_InitUnitCubeVBO();
-	R_InitTileVBO();
+
+	if ( r_dynamicLight->integer == 2 ) {
+		R_InitTileVBO();
+	}
 
 	// allocate a PBO for color grade map transfers
 	glGenBuffers( 1, &tr.colorGradePBO );
