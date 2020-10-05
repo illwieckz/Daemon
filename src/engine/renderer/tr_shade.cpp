@@ -123,9 +123,13 @@ static void GLSL_InitGPUShadersOrError()
 		Log::Warn("SSAO not used because GL_ARB_texture_gather is not available.");
 	}
 
-	gl_shaderManager.load( gl_depthtile1Shader );
-	gl_shaderManager.load( gl_depthtile2Shader );
-	gl_shaderManager.load( gl_lighttileShader );
+	if ( r_dynamicLight->integer == 2 )
+	{
+		gl_shaderManager.load( gl_depthtile1Shader );
+		gl_shaderManager.load( gl_depthtile2Shader );
+		gl_shaderManager.load( gl_lighttileShader );
+	}
+
 	gl_shaderManager.load( gl_fxaaShader );
 
 	if ( !r_lazyShaders->integer )
