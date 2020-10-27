@@ -589,6 +589,8 @@ static inline void halfToFloat( const f16vec4_t in, vec4_t out )
 		int bits = 0;
 		filterType_t filterType;
 		wrapType_t wrapType;
+		int minDimension = 0;
+		int maxDimension = 0;
 	};
 
 	struct image_t
@@ -1268,6 +1270,8 @@ static inline void halfToFloat( const f16vec4_t in, vec4_t out )
 		float          polygonOffsetValue;
 
 		bool       noPicMip; // for images that must always be full resolution
+		int        imageMinDimension;   // for images that must not be loaded with smaller size
+		int        imageMaxDimension;   // for images that must not be loaded with larger size
 		filterType_t   filterType; // for console fonts, 2D elements, etc.
 		wrapType_t     wrapType;
 
@@ -2881,6 +2885,8 @@ static inline void halfToFloat( const f16vec4_t in, vec4_t out )
 	extern cvar_t *r_singleShader; // make most world faces use default shader
 	extern cvar_t *r_colorMipLevels; // development aid to see texture mip usage
 	extern cvar_t *r_picmip; // controls picmip values
+	extern cvar_t *r_imageMinDimension;
+	extern cvar_t *r_imageMaxDimension;
 	extern cvar_t *r_finish;
 	extern cvar_t *r_drawBuffer;
 	extern cvar_t *r_swapInterval;
@@ -3212,7 +3218,7 @@ static inline void halfToFloat( const f16vec4_t in, vec4_t out )
 	qhandle_t RE_GenerateTexture( const byte *pic, int width, int height );
 
 	image_t *R_AllocImage( const char *name, bool linkIntoHashTable );
-	void R_UploadImage( const byte **dataArray, int numLayers, int numMips, image_t *image );
+	void R_UploadImage( const byte **dataArray, int numLayers, int numMips, image_t *image, const imageParams_t &imageParams );
 
 	void    RE_GetTextureSize( int textureID, int *width, int *height );
 

@@ -6690,7 +6690,9 @@ void R_BuildCubeMaps()
 		cubeProbe->cubemap->filterType = filterType_t::FT_LINEAR;
 		cubeProbe->cubemap->wrapType = wrapTypeEnum_t::WT_EDGE_CLAMP;
 
-		R_UploadImage( ( const byte ** ) tr.cubeTemp, 6, 1, cubeProbe->cubemap );
+		imageParams_t imageParams = {};
+
+		R_UploadImage( ( const byte ** ) tr.cubeTemp, 6, 1, cubeProbe->cubemap, imageParams );
 	}
 
 	Log::Notice("\n");
