@@ -827,12 +827,24 @@ bool R_LoadIQModel( model_t *mod, void *buffer, int filesize,
 		ibo = nullptr;
 
 		if( IQModel->blendWeights ) {
+			IQModel->numWeights = (int*) ri.Hunk_Alloc( sizeof( int ) * IQModel->num_vertexes, ha_pref::h_low );
+
 			for(int i = 0; i < IQModel->num_vertexes; i++ ) {
 				if( IQModel->blendWeights[ 4 * i + 0 ] == 0 &&
 				    IQModel->blendWeights[ 4 * i + 1 ] == 0 &&
 				    IQModel->blendWeights[ 4 * i + 2 ] == 0 &&
 				    IQModel->blendWeights[ 4 * i + 3 ] == 0 )
 					IQModel->blendWeights[ 4 * i + 0 ] = 255;
+
+				if ( IQModel->blendWeights[ 4 * i + 1 ] == 0 ) {
+					IQModel->numWeights[ i ] = 1;
+				} else if ( IQModel->blendWeights[ 4 * i + 2 ] == 0 ) {
+					IQModel->numWeights[ i ] = 2;
+				} else if ( IQModel->blendWeights[ 4 * i + 3 ] == 0 ) {
+					IQModel->numWeights[ i ] = 3;
+				} else {
+					IQModel->numWeights[ i ] = 1;
+				}
 			}
 		}
 	}

@@ -1206,24 +1206,6 @@ static void Tess_SurfaceMD5( md5Surface_t *srf )
 	tess.numVertexes += srf->numVerts;
 }
 
-int getNumWeight( byte *weight )
-{
-	/*
-	if ( weight[ 1 ] == 0 ) { return 1 };
-	if ( weight[ 2 ] == 0 ) { return 2 };
-	if ( weight[ 3 ] == 0 ) { return 3 };
-	return 1;
-	*/
-
-	return 1
-		+ ( weight[ 1 ] != 0 ) 
-		* ( ( weight[ 1 ] != 0 )
-			+ ( weight[ 2 ] != 0 )
-			* ( ( weight[ 2 ] != 0 )
-				+ ( weight[ 3 ] != 0 )
-				* ( ( weight[ 3 ] != 0 ) ) ) );
-}
-
 /*
 =================
 Tess_SurfaceIQM
@@ -1338,6 +1320,7 @@ void Tess_SurfaceIQM( srfIQModel_t *surf ) {
 	float *modelTangent = model->tangents + 3 * firstVertex;
 	float *modelBitangent = model->bitangents + 3 * firstVertex;
 	int16_t *modelTexcoord = model->texcoords + 2 * firstVertex;
+	int *modelNumWeights = model->numWeights;
 	shaderVertex_t *tessVertex = tess.verts + tess.numVertexes;
 	shaderVertex_t *lastVertex = tessVertex + surf->num_vertexes;
 
@@ -1354,15 +1337,13 @@ void Tess_SurfaceIQM( srfIQModel_t *surf ) {
 			for ( ; tessVertex < lastVertex; tessVertex++,
 				modelPosition += 3, modelNormal += 3,
 				modelTangent += 3, modelBitangent += 3,
-				modelTexcoord += 2 )
+				modelTexcoord += 2, modelNumWeights++ )
 			{
 				vec3_t position, tmp;
 
 				VectorClear( position );
 
-				int numWeight = getNumWeight( modelBlendWeight );
-
-				byte *lastBlendIndex = modelBlendIndex + numWeight;
+				byte *lastBlendIndex = modelBlendIndex + *modelNumWeights;
 
 				for ( ; modelBlendIndex < lastBlendIndex; modelBlendIndex++,
 					modelBlendWeight++ )
@@ -1373,8 +1354,8 @@ void Tess_SurfaceIQM( srfIQModel_t *surf ) {
 					VectorMA( position, weight, tmp, position );
 				}
 
-				modelBlendIndex += 4 - numWeight;
-				modelBlendWeight += 4 - numWeight;
+				modelBlendIndex += 4 - *modelNumWeights;
+				modelBlendWeight += 4 - *modelNumWeights;
 
 				VectorCopy( position, tessVertex->xyz );
 
@@ -1389,7 +1370,7 @@ void Tess_SurfaceIQM( srfIQModel_t *surf ) {
 			for ( ; tessVertex < lastVertex; tessVertex++,
 				modelPosition += 3, modelNormal += 3,
 				modelTangent += 3, modelBitangent += 3,
-				modelTexcoord += 2 )
+				modelTexcoord += 2, modelNumWeights++ )
 			{
 				vec3_t position, tangent, binormal, normal, tmp;
 
@@ -1398,9 +1379,7 @@ void Tess_SurfaceIQM( srfIQModel_t *surf ) {
 				VectorClear( tangent );
 				VectorClear( binormal );
 
-				int numWeight = getNumWeight( modelBlendWeight );
-
-				byte *lastBlendIndex = modelBlendIndex + numWeight;
+				byte *lastBlendIndex = modelBlendIndex + *modelNumWeights;
 
 				for ( ; modelBlendIndex < lastBlendIndex; modelBlendIndex++,
 					modelBlendWeight++ )
@@ -1420,8 +1399,8 @@ void Tess_SurfaceIQM( srfIQModel_t *surf ) {
 					VectorMA( binormal, weight, tmp, binormal );
 				}
 
-				modelBlendIndex += 4 - numWeight;
-				modelBlendWeight += 4 - numWeight;
+				modelBlendIndex += 4 - *modelNumWeights;
+				modelBlendWeight += 4 - *modelNumWeights;
 
 				VectorNormalize( normal );
 				VectorNormalize( tangent );

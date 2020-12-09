@@ -2299,6 +2299,7 @@ static inline void halfToFloat( const f16vec4_t in, vec4_t out )
 		float           *bitangents;
 		byte            *blendIndexes;
 		byte            *blendWeights;
+		int             *numWeights;
 		byte            *colors;
 		int             *triangles;
 
