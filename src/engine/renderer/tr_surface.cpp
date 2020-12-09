@@ -1206,6 +1206,24 @@ static void Tess_SurfaceMD5( md5Surface_t *srf )
 	tess.numVertexes += srf->numVerts;
 }
 
+int getNumWeight( byte *weight )
+{
+	/*
+	if ( weight[ 1 ] == 0 ) { return 1 };
+	if ( weight[ 2 ] == 0 ) { return 2 };
+	if ( weight[ 3 ] == 0 ) { return 3 };
+	return 1;
+	*/
+
+	return 1
+		+ ( weight[ 1 ] != 0 ) 
+		* ( ( weight[ 1 ] != 0 )
+			+ ( weight[ 2 ] != 0 )
+			* ( ( weight[ 2 ] != 0 )
+				+ ( weight[ 3 ] != 0 )
+				* ( ( weight[ 3 ] != 0 ) ) ) );
+}
+
 /*
 =================
 Tess_SurfaceIQM
@@ -1342,21 +1360,21 @@ void Tess_SurfaceIQM( srfIQModel_t *surf ) {
 
 				VectorClear( position );
 
-				byte *lastBlendIndex = modelBlendIndex + 4;
+				int numWeight = getNumWeight( modelBlendWeight );
+
+				byte *lastBlendIndex = modelBlendIndex + numWeight;
 
 				for ( ; modelBlendIndex < lastBlendIndex; modelBlendIndex++,
 					modelBlendWeight++ )
 				{
-					if ( *modelBlendWeight == 0 )
-					{
-						continue;
-					}
-
 					float weight = *modelBlendWeight * weightFactor;
 
 					TransformPoint( &bones[ *modelBlendIndex ], modelPosition, tmp );
 					VectorMA( position, weight, tmp, position );
 				}
+
+				modelBlendIndex += 4 - numWeight;
+				modelBlendWeight += 4 - numWeight;
 
 				VectorCopy( position, tessVertex->xyz );
 
@@ -1380,16 +1398,13 @@ void Tess_SurfaceIQM( srfIQModel_t *surf ) {
 				VectorClear( tangent );
 				VectorClear( binormal );
 
-				byte *lastBlendIndex = modelBlendIndex + 4;
+				int numWeight = getNumWeight( modelBlendWeight );
+
+				byte *lastBlendIndex = modelBlendIndex + numWeight;
 
 				for ( ; modelBlendIndex < lastBlendIndex; modelBlendIndex++,
 					modelBlendWeight++ )
 				{
-					if ( *modelBlendWeight == 0 )
-					{
-						continue;
-					}
-
 					float weight = *modelBlendWeight * weightFactor;
 
 					TransformPoint( &bones[ *modelBlendIndex ], modelPosition, tmp );
@@ -1404,6 +1419,9 @@ void Tess_SurfaceIQM( srfIQModel_t *surf ) {
 					TransformNormalVector( &bones[ *modelBlendIndex ], modelBitangent, tmp );
 					VectorMA( binormal, weight, tmp, binormal );
 				}
+
+				modelBlendIndex += 4 - numWeight;
+				modelBlendWeight += 4 - numWeight;
 
 				VectorNormalize( normal );
 				VectorNormalize( tangent );
