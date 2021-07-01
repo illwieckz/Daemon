@@ -51,6 +51,33 @@ static const vec3_t sky_clip[ 6 ] =
 static float sky_mins[ 2 ][ 6 ], sky_maxs[ 2 ][ 6 ];
 static float sky_min, sky_max;
 
+/* FalseToMinus
+================
+Returns 1 for true and -1 for false;
+
+Can turn this:
+
+if ( i > 0 )
+{
+	dv = vecs[ i - 1 ];
+}
+else
+{
+	dv = -vecs[ -i - 1 ];
+}
+
+into branchless operation:
+
+sign = FalseToMinus( i > O )
+dv = sign * vecs[ sign * i - 1 ];
+
+================
+*/
+inline int FalseToMinus( bool b )
+{
+	return int(b - !b);
+}
+
 /*
 ================
 AddSkyPolygon
@@ -104,8 +131,8 @@ static void AddSkyPolygon( int nump, vec3_t vecs )
 	for ( float *vec = vecs; vec < lastVec; vec += 3 )
 	{
 		int i = vec_to_st[ axis ][ 2 ];
-
-		float dv = i > 0 ? vec[ i - 1 ] : -vec[ -i - 1 ];
+		int sign = FalseToMinus( i > 0 );
+		float dv = sign *  vec[ sign * i - 1 ];
 
 		if ( dv < 0.001 )
 		{
@@ -114,12 +141,12 @@ static void AddSkyPolygon( int nump, vec3_t vecs )
 		}
 
 		i = vec_to_st[ axis ][ 0 ];
-
-		float s = i < 0 ? -vec[ -i - 1 ] / dv : vec[ i - 1 ] / dv;
+		sign = -FalseToMinus( i < 0 );
+		float s = sign * vec[ sign * i - 1 ] / dv;
 
 		i = vec_to_st[ axis ][ 1 ];
-
-		float t = i < 0 ? -vec[ -i - 1 ] / dv : vec[ i - 1 ] / dv;
+		sign = -FalseToMinus( i < 0 );
+		float t = sign * vec[ sign * i - 1 ] / dv;
 
 		if ( s < sky_mins[ 0 ][ axis ] )
 		{
