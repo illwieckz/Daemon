@@ -492,6 +492,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 
 						This equivalence relies on projectionDir being normalized, as ensured by
 						R_MarkFragments(), and assumes the triangle has a non-zero area. */
+						vec3_t normal;
 						CrossProduct( v1, v2, normal );
 						float dot = DotProduct( normal, projectionDir );
 						float lenSq = DotProduct( normal, normal );
