@@ -374,7 +374,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 	vec3_t negProjection;
 	VectorNegate( projection, negProjection );
 
-	for ( i = 0; i < numPoints; i++ )
+	for ( int i = 0; i < numPoints; i++ )
 	{
 		const int next = ( i + 1 == numPoints ) ? 0 : i + 1;
 
