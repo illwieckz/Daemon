@@ -31,6 +31,7 @@ static const int MARKER_OFFSET     = 0;
 
 #define MARKS_ORDERED 1
 #define MARKS_FAST 1
+#define MARKS_BOUND 1
 
 using points_t = std::array<vec3_t, MAX_VERTS_ON_POLY>;
 using clipPoints_t = std::array<points_t, 2>;
@@ -235,6 +236,29 @@ void R_BoxSurfaces_r( bspNode_t *node, vec3_t mins, vec3_t maxs, surfaceType_t *
 	}
 }
 
+#if MARKS_BOUND
+static bool R_MarkFragmentBoundsIntersect( const clipPoints_t& clipPoints, const vec3_t mins, const vec3_t maxs )
+{
+	vec3_t triMins, triMaxs;
+	ClearBounds( triMins, triMaxs );
+
+	for ( int i = 0; i < 3; i++ )
+	{
+		AddPointToBounds( clipPoints[ 0 ][ i ], triMins, triMaxs );
+	}
+
+	for ( int i = 0; i < 3; i++ )
+	{
+		if ( triMaxs[ i ] < mins[ i ] || triMins[ i ] > maxs[ i ] )
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+#endif
+
 /*
 =================
 R_AddMarkFragments
@@ -315,6 +339,21 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 		VectorMA( points[ i ], -20, projectionDir, temp );
 		AddPointToBounds( temp, mins, maxs );
 	}
+
+#if MARKS_BOUND
+	// Build conservative bounds for the complete clipping volume.
+	vec3_t fragmentMins, fragmentMaxs;
+	VectorCopy( mins, fragmentMins );
+	VectorCopy( maxs, fragmentMaxs );
+	for ( int i = 0; i < numPoints; i++ )
+	{
+		vec3_t temp;
+		VectorMA( points[ i ], -32, projectionDir, temp );
+		AddPointToBounds( temp, fragmentMins, fragmentMaxs );
+		VectorMA( points[ i ], 20, projectionDir, temp );
+		AddPointToBounds( temp, fragmentMins, fragmentMaxs );
+	}
+#endif
 
 	if ( numPoints > MAX_VERTS_ON_POLY )
 	{
@@ -550,6 +589,15 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 		for ( auto& candidate : threadCandidates )
 		{
 #endif
+
+#if MARKS_BOUND
+			// Skip triangles that cannot intersect the clipping volume.
+			if ( !R_MarkFragmentBoundsIntersect( candidate, fragmentMins, fragmentMaxs ) )
+			{
+				continue;
+			}
+#endif
+
 			R_AddMarkFragments( candidate,
 								numPlanes, normals, dists,
 								maxPoints, pointBuffer,
