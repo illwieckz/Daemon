@@ -318,6 +318,27 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 	float dists[ MAX_VERTS_ON_POLY + 2 ];
 
 	// create the bounding planes for the to be projected polygon
+#if MARKS_FAST
+	/* Compute the clipping plane normals directly from the projection direction
+	and each polygon edge, avoiding the construction of an intermediate point
+	and two vector operations per plane.
+
+	Since the projection vector is constant for all edges, its negation is
+	computed only once outside the loop. */
+	vec3_t negProjection;
+	VectorNegate( projection, negProjection );
+
+	for ( i = 0; i < numPoints; i++ )
+	{
+		const int next = ( i + 1 == numPoints ) ? 0 : i + 1;
+
+		VectorSubtract( points[next], points[i], v1 );
+		CrossProduct( v1, negProjection, normals[i] );
+		VectorNormalizeFast( normals[i] );
+
+		dists[i] = DotProduct( normals[i], points[i] );
+	}
+#else
 	for ( int i = 0; i < numPoints; i++ )
 	{
 		vec3_t v1, v2;
@@ -328,6 +349,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 		VectorNormalizeFast( normals[ i ] );
 		dists[ i ] = DotProduct( normals[ i ], points[ i ] );
 	}
+#endif
 
 	// add near and far clipping planes for projection
 	VectorCopy( projectionDir, normals[ numPoints ] );
