@@ -378,6 +378,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 	{
 		const int next = ( i + 1 == numPoints ) ? 0 : i + 1;
 
+		vec3_t v1;
 		VectorSubtract( points[next], points[i], v1 );
 		CrossProduct( v1, negProjection, normals[i] );
 		VectorNormalizeFast( normals[i] );
