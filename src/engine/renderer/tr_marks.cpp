@@ -541,11 +541,12 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 				{
 					clipPoints_t clipPoints;
 
-					for ( int j = 0; j < 3; j++ )
-					{
-						float *v = face->verts[ tri->indexes[ j ] ].xyz;
-						VectorMA( v, MARKER_OFFSET, face->plane.normal, clipPoints[ 0 ][ j ] );
-					}
+					float *v = face->verts[ tri->indexes[ 0 ] ].xyz;
+					float *v = face->verts[ tri->indexes[ 1 ] ].xyz;
+					float *v = face->verts[ tri->indexes[ 2 ] ].xyz;
+					VectorMA( v, MARKER_OFFSET, face->plane.normal, clipPoints[ 0 ][ 0 ] );
+					VectorMA( v, MARKER_OFFSET, face->plane.normal, clipPoints[ 0 ][ 1 ] );
+					VectorMA( v, MARKER_OFFSET, face->plane.normal, clipPoints[ 0 ][ 2 ] );
 
 					// add the fragments of this face
 					localCandidates.push_back(clipPoints);
@@ -560,10 +561,9 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 				{
 					clipPoints_t clipPoints;
 
-					for ( int j = 0; j < 3; j++ )
-					{
-						VectorCopy( trisurf->verts[ tri->indexes[ j ] ].xyz, clipPoints[ 0 ][ j ] );
-					}
+					VectorCopy( trisurf->verts[ tri->indexes[ 0 ] ].xyz, clipPoints[ 0 ][ 0 ] );
+					VectorCopy( trisurf->verts[ tri->indexes[ 1 ] ].xyz, clipPoints[ 0 ][ 1 ] );
+					VectorCopy( trisurf->verts[ tri->indexes[ 2 ] ].xyz, clipPoints[ 0 ][ 2 ] );
 
 					// add the fragments of this face
 					localCandidates.push_back(clipPoints);
