@@ -30,6 +30,7 @@ static const int MAX_VERTS_ON_POLY = 64;
 static const int MARKER_OFFSET     = 0;
 
 #define MARKS_ORDERED 1
+#define MARKS_FAST 1
 
 using points_t = std::array<vec3_t, MAX_VERTS_ON_POLY>;
 using clipPoints_t = std::array<points_t, 2>;
@@ -402,11 +403,38 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 						// check the normal of this triangle
 						VectorSubtract( clipPoints[ 0 ][ 0 ], clipPoints[ 0 ][ 1 ], v1 );
 						VectorSubtract( clipPoints[ 0 ][ 2 ], clipPoints[ 0 ][ 1 ], v2 );
+#if MARKS_FAST
+						/* Avoid normalizing the triangle normal just to compare its angle against
+						the projection direction.
+
+						For a non-zero normal N, the original test:
+
+							DotProduct( Normalize(N), projectionDir ) < -0.1
+
+						is equivalent to:
+
+							dot < 0 && dot * dot > 0.01f * lenSq
+
+						where dot = DotProduct(N, projectionDir) and lenSq = DotProduct(N, N).
+
+						This avoids the relatively expensive VectorNormalizeFast() while preserving
+						the original angular threshold. The sign check ensures that only triangles
+						facing against the projection direction are accepted.
+
+						This equivalence relies on projectionDir being normalized, as ensured by
+						R_MarkFragments(), and assumes the triangle has a non-zero area. */
+						CrossProduct( v1, v2, normal );
+						float dot = DotProduct( normal, projectionDir );
+						float lenSq = DotProduct( normal, normal );
+
+						if ( dot < 0.0f && dot * dot > 0.01f * lenSq )
+#else
 						vec3_t normal;
 						CrossProduct( v1, v2, normal );
 						VectorNormalizeFast( normal );
 
 						if ( DotProduct( normal, projectionDir ) < -0.1 )
+#endif
 						{
 							// add the fragments of this triangle
 							localCandidates.push_back(clipPoints);
