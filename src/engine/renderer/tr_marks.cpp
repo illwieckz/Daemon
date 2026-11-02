@@ -242,18 +242,13 @@ static bool R_MarkFragmentBoundsIntersect( const clipPoints_t& clipPoints, const
 	vec3_t triMins, triMaxs;
 	ClearBounds( triMins, triMaxs );
 
-	for ( int i = 0; i < 3; i++ )
-	{
-		AddPointToBounds( clipPoints[ 0 ][ i ], triMins, triMaxs );
-	}
+	AddPointToBounds( clipPoints[ 0 ][ 0 ], triMins, triMaxs );
+	AddPointToBounds( clipPoints[ 0 ][ 1 ], triMins, triMaxs );
+	AddPointToBounds( clipPoints[ 0 ][ 2 ], triMins, triMaxs );
 
-	for ( int i = 0; i < 3; i++ )
-	{
-		if ( triMaxs[ i ] < mins[ i ] || triMins[ i ] > maxs[ i ] )
-		{
-			return false;
-		}
-	}
+	if ( triMaxs[ 0 ] < mins[ 0 ] || triMins[ 0 ] > maxs[ 0 ] ) return false;
+	if ( triMaxs[ 1 ] < mins[ 1 ] || triMins[ 1 ] > maxs[ 1 ] ) return false;
+	if ( triMaxs[ 2 ] < mins[ 2 ] || triMins[ 2 ] > maxs[ 2 ] ) return false;
 
 	return true;
 }
