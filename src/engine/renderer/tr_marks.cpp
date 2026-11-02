@@ -127,7 +127,7 @@ static void R_ChopPolyBehindPlane( int numInPoints, points_t& inPoints,
 		/* Avoid the modulo operation when selecting the next polygon vertex.
 		Since the loop only needs to wrap around at the final vertex, an
 		explicit bounds check is sufficient and avoids the modulo overhead. */
-		p2 = (i + 1 < numInPoints) ? inPoints[i + 1] : inPoints[0];
+		float $p2 = (i + 1 < numInPoints) ? inPoints[i + 1] : inPoints[0];
 #else
 		float *p2 = inPoints[( i + 1 ) % numInPoints ];
 #endif
