@@ -142,10 +142,9 @@ static void R_ChopPolyBehindPlane( int numInPoints, points_t& inPoints,
 		}
 
 		// clip xyz
-		for ( int j = 0; j < 3; j++ )
-		{
-			clip[ j ] = p1[ j ] + dot * ( p2[ j ] - p1[ j ] );
-		}
+		clip[ 0 ] = p1[ 0 ] + dot * ( p2[ 0 ] - p1[ 0 ] );
+		clip[ 1 ] = p1[ 1 ] + dot * ( p2[ 1 ] - p1[ 1 ] );
+		clip[ 2 ] = p1[ 2 ] + dot * ( p2[ 2 ] - p1[ 2 ] );
 
 		( *numOutPoints ) ++;
 	}
