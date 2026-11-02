@@ -36,6 +36,7 @@ void EnlistThreads();
 void SetupThreads();
 void Init();
 int GetThreads();
+int GetThreadNum();
 };
 
 #endif // COMMON_OMP_SYSTEM_H_

@@ -129,4 +129,13 @@ int GetThreads()
 {
 	return ompThreads;
 }
+
+int GetThreadNum()
+{
+#if defined(_OPENMP)
+	return omp_get_thread_num();
+#else
+	return 1;
+#endif
+}
 }
