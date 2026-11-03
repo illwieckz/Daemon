@@ -459,6 +459,8 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 			{
 				srfGridMesh_t *cv = ( srfGridMesh_t * ) surfaces[ i ];
 
+				localCandidates.reserve( localCandidates.size() + 2 * ( cv->width - 1 ) * ( cv->height - 1 ) );
+
 				for ( int m = 0; m < cv->height - 1; m++ )
 				{
 					for ( int n = 0; n < cv->width - 1; n++ )
