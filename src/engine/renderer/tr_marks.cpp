@@ -36,6 +36,11 @@ static const int MARKER_OFFSET     = 0;
 using points_t = std::array<vec3_t, MAX_VERTS_ON_POLY>;
 using clipPoints_t = std::array<points_t, 2>;
 
+struct markTriangle_t
+{
+	vec3_t points[ 3 ];
+};
+
 /*
 =============
 R_ChopPolyBehindPlane
@@ -236,14 +241,14 @@ void R_BoxSurfaces_r( bspNode_t *node, vec3_t mins, vec3_t maxs, surfaceType_t *
 }
 
 #if MARKS_BOUND
-static bool R_MarkFragmentBoundsIntersect( const clipPoints_t& clipPoints, const vec3_t mins, const vec3_t maxs )
+static bool R_MarkFragmentBoundsIntersect( const markTriangle_t& triangle, const vec3_t mins, const vec3_t maxs )
 {
 	vec3_t triMins, triMaxs;
 	ClearBounds( triMins, triMaxs );
 
-	AddPointToBounds( clipPoints[ 0 ][ 0 ], triMins, triMaxs );
-	AddPointToBounds( clipPoints[ 0 ][ 1 ], triMins, triMaxs );
-	AddPointToBounds( clipPoints[ 0 ][ 2 ], triMins, triMaxs );
+	AddPointToBounds( triangle.points[ 0 ], triMins, triMaxs );
+	AddPointToBounds( triangle.points[ 1 ], triMins, triMaxs );
+	AddPointToBounds( triangle.points[ 2 ], triMins, triMaxs );
 
 	if ( triMaxs[ 0 ] < mins[ 0 ] || triMins[ 0 ] > maxs[ 0 ] ) return false;
 	if ( triMaxs[ 1 ] < mins[ 1 ] || triMins[ 1 ] > maxs[ 1 ] ) return false;
@@ -252,6 +257,18 @@ static bool R_MarkFragmentBoundsIntersect( const clipPoints_t& clipPoints, const
 	return true;
 }
 #endif
+
+static markTriangle_t R_MakeMarkTriangle( const clipPoints_t& clipPoints )
+{
+	markTriangle_t triangle;
+
+	for ( int i = 0; i < 3; i++ )
+	{
+		VectorCopy( clipPoints[ 0 ][ i ], triangle.points[ i ] );
+	}
+
+	return triangle;
+}
 
 /*
 =================
@@ -405,15 +422,15 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 	R_BoxSurfaces_r( tr.world->nodes, mins, maxs, surfaces, 64, &numsurfaces, projectionDir );
 
 #if MARKS_ORDERED
-	std::vector<std::vector<clipPoints_t>> surfaceClipCandidates( numsurfaces );
+	std::vector<std::vector<markTriangle_t>> surfaceClipCandidates( numsurfaces );
 #else
-	std::vector<std::vector<clipPoints_t>> threadClipCandidates( Omp::GetThreads() );
+	std::vector<std::vector<markTriangle_t>> threadClipCandidates( Omp::GetThreads() );
 #endif
 
 	#pragma omp parallel
 	{
 #if !MARKS_ORDERED
-		std::vector<clipPoints_t>& localCandidates = threadClipCandidates[ Omp::GetThreadNum() ];
+		std::vector<markTriangle_t>& localCandidates = threadClipCandidates[ Omp::GetThreadNum() ];
 #endif
 
 		#pragma omp for schedule(dynamic, 1)
@@ -501,7 +518,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 #endif
 						{
 							// add the fragments of this triangle
-							localCandidates.push_back(clipPoints);
+							localCandidates.push_back( R_MakeMarkTriangle( clipPoints ) );
 						}
 
 						VectorCopy( dv[ 1 ].xyz, clipPoints[ 0 ][ 0 ] );
@@ -519,7 +536,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 						if ( DotProduct( normal, projectionDir ) < -0.05 )
 						{
 							// add the fragments of this triangle
-							localCandidates.push_back(clipPoints);
+							localCandidates.push_back( R_MakeMarkTriangle( clipPoints ) );
 						}
 					}
 				}
@@ -548,7 +565,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 					VectorMA( v, MARKER_OFFSET, face->plane.normal, clipPoints[ 0 ][ 2 ] );
 
 					// add the fragments of this face
-					localCandidates.push_back(clipPoints);
+					localCandidates.push_back( R_MakeMarkTriangle( clipPoints ) );
 				}
 			}
 			else if ( *surfaces[ i ] == surfaceType_t::SF_TRIANGLES && !r_noMarksOnTrisurfs->integer )
@@ -565,7 +582,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 					VectorCopy( trisurf->verts[ tri->indexes[ 2 ] ].xyz, clipPoints[ 0 ][ 2 ] );
 
 					// add the fragments of this face
-					localCandidates.push_back(clipPoints);
+					localCandidates.push_back( R_MakeMarkTriangle( clipPoints ) );
 				}
 			}
 		}
@@ -594,16 +611,18 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 			}
 #endif
 
-			R_AddMarkFragments( candidate,
+			clipPoints_t clipPoints = {};
+
+			for ( int i = 0; i < 3; i++ )
+			{
+				VectorCopy( candidate.points[ i ], clipPoints[ 0 ][ i ] );
+			}
+
+			R_AddMarkFragments( clipPoints,
 								numPlanes, normals, dists,
 								maxPoints, pointBuffer,
 								fragmentBuffer, &returnedPoints,
 								&returnedFragments );
-
-			if ( returnedFragments == maxFragments )
-			{
-				return returnedFragments;
-			}
 		}
 	}
 
