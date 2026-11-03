@@ -270,6 +270,21 @@ static markTriangle_t R_MakeMarkTriangle( const clipPoints_t& clipPoints )
 	return triangle;
 }
 
+static void R_QueueMarkTriangle( std::vector<markTriangle_t>& candidates,
+	const clipPoints_t& clipPoints, const vec3_t mins, const vec3_t maxs )
+{
+	markTriangle_t triangle = R_MakeMarkTriangle( clipPoints );
+
+#if MARKS_BOUND
+	if ( !R_MarkFragmentBoundsIntersect( triangle, mins, maxs ) )
+	{
+		return;
+	}
+#endif
+
+	candidates.push_back( triangle );
+}
+
 /*
 =================
 R_AddMarkFragments
@@ -518,7 +533,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 #endif
 						{
 							// add the fragments of this triangle
-							localCandidates.push_back( R_MakeMarkTriangle( clipPoints ) );
+							R_QueueMarkTriangle( localCandidates, clipPoints, fragmentMins, fragmentMaxs );
 						}
 
 						VectorCopy( dv[ 1 ].xyz, clipPoints[ 0 ][ 0 ] );
@@ -536,7 +551,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 						if ( DotProduct( normal, projectionDir ) < -0.05 )
 						{
 							// add the fragments of this triangle
-							localCandidates.push_back( R_MakeMarkTriangle( clipPoints ) );
+							R_QueueMarkTriangle( localCandidates, clipPoints, fragmentMins, fragmentMaxs );
 						}
 					}
 				}
@@ -565,7 +580,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 					VectorMA( v2, MARKER_OFFSET, face->plane.normal, clipPoints[ 0 ][ 2 ] );
 
 					// add the fragments of this face
-					localCandidates.push_back( R_MakeMarkTriangle( clipPoints ) );
+					R_QueueMarkTriangle( localCandidates, clipPoints, fragmentMins, fragmentMaxs );
 				}
 			}
 			else if ( *surfaces[ i ] == surfaceType_t::SF_TRIANGLES && !r_noMarksOnTrisurfs->integer )
@@ -582,7 +597,7 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 					VectorCopy( trisurf->verts[ tri->indexes[ 2 ] ].xyz, clipPoints[ 0 ][ 2 ] );
 
 					// add the fragments of this face
-					localCandidates.push_back( R_MakeMarkTriangle( clipPoints ) );
+					R_QueueMarkTriangle( localCandidates, clipPoints, fragmentMins, fragmentMaxs );
 				}
 			}
 		}
@@ -601,14 +616,6 @@ int R_MarkFragments( int numPoints, const vec3_t *points, const vec3_t projectio
 	{
 		for ( auto& candidate : threadCandidates )
 		{
-#endif
-
-#if MARKS_BOUND
-			// Skip triangles that cannot intersect the clipping volume.
-			if ( !R_MarkFragmentBoundsIntersect( candidate, fragmentMins, fragmentMaxs ) )
-			{
-				continue;
-			}
 #endif
 
 			clipPoints_t clipPoints = {};
